@@ -12,10 +12,12 @@ interface User {
 
 const datasetId = "emidataset";
 const tableId = "users";
-const SELECT_FROM_USERS = "SELECT * FROM emidataset.users LIMIT 20";
+const SELECT_FROM_USERS = `SELECT * FROM ${datasetId}.${tableId} LIMIT 20`;
+const SELECT_AVERAGE_PRICE = `SELECT AVG(salary) AS average_salary FROM ${datasetId}.${tableId}`;
 const USERS_COUNT = 500;
+const KEY_FILE = "bq-key.json";
 
-const keyPath = path.join(__dirname, "..", "bq-key.json");
+const keyPath = path.join(__dirname, "..", KEY_FILE);
 const credentials = JSON.parse(fs.readFileSync(keyPath, "utf-8"));
 const bigquery = new BigQuery({
   credentials,
@@ -34,6 +36,18 @@ async function craeteUsers(dataLength: number): Promise<User[]> {
   }
   console.log(`created ${dataLength} test users`);
   return users;
+}
+
+async function calculateAverageSalary(): Promise<number | undefined> {
+  const query = SELECT_AVERAGE_PRICE;
+  const options = { query };
+  try {
+    const [rows] = await bigquery.query(options);
+    return rows[0].average_salary as number;
+  } catch (err) {
+    console.log(err);
+    return undefined;
+  }
 }
 
 async function insert(): Promise<boolean> {
@@ -61,5 +75,7 @@ async function main() {
   await insert();
   const users = await select();
   console.log(users);
+  const average_salary = await calculateAverageSalary();
+  console.log("average salary", average_salary);
 }
 main();
